@@ -321,7 +321,7 @@ def query_anytime_planner_path(fot_planner, return_rv_object=False):
 
     success = fot_rv.success
     # remove values after last calculated waypoint
-    ind = -1
+    ind = path_length # -1
     # if success:
     #     try:
     #         print(x_path)
