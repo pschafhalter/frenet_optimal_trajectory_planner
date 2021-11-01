@@ -15,14 +15,14 @@ from fot_wrapper import (
     query_anytime_planner_path,
 )
 
-matplotlib.use("TkAgg")
+# matplotlib.use("TkAgg")
 
 
 def generate_obstacles(num_obstacles: int):
     # TODO: smarter generation of obstacles.
     obstacles = []
     for _ in range(num_obstacles):
-        llx = np.random.randint(0, 100)
+        llx = np.random.randint(0, 140)
         lly = np.random.randint(-5, 2)
         urx = llx + np.random.randint(0, 6)
         ury = lly + np.random.randint(0, 6)
@@ -43,22 +43,27 @@ def generate_initial_conditions(num_obstacles: int):
 
 class FOTEnv(gym.Env):
     def __init__(self):
-        self.action_space = spaces.Dict(
-            {
-                "d_road_w": spaces.Box(1e-3, 5.0, shape=(1,)),
-                "dt": spaces.Box(1e-3, 1.0, shape=(1,)),
-                "mint": spaces.Box(0.1, 10.0, shape=(1,)),
-                "d_min_max_t": spaces.Box(0.1, 10.0, shape=(1,)),
-                "d_t_s": spaces.Box(1e-3, 5.0, shape=(1,)),
-                "n_s_sample": spaces.Discrete(10),
-            }
-        )
+        # self.action_space = spaces.Dict(
+        #     {
+        #         "d_road_w": spaces.Box(1e-3, 5.0, shape=(1,)),
+        #         "dt": spaces.Box(1e-3, 1.0, shape=(1,)),
+        #         "mint": spaces.Box(0.1, 10.0, shape=(1,)),
+        #         "d_min_max_t": spaces.Box(0.1, 10.0, shape=(1,)),
+        #         "d_t_s": spaces.Box(1e-3, 5.0, shape=(1,)),
+        #         # "n_s_sample": spaces.Discrete(10),
+        #         "n_s_sample": spaces.Box(1, 10, shape=(1,)),
+        #     }
+        #  )
+        self.action_space = spaces.Box(0.0, 1.0, shape=(7,))
+        """
         self.observation_space = spaces.Dict(
             {
                 "num_obstacles": spaces.Discrete(11),
                 "deadline": spaces.Box(0.001, 0.1, shape=(1,)),
             }
         )
+        """
+        self.observation_space = spaces.Box(0.0, 1.0, shape=(3,))
 
         self.initial_conditions = None
 
@@ -66,6 +71,7 @@ class FOTEnv(gym.Env):
         self.num_obstacles = np.random.randint(0, 11)
         self.initial_conditions = generate_initial_conditions(self.num_obstacles)
         self.deadline = np.random.uniform(0.001, 0.1)
+        return np.array([self.deadline, self.num_obstacles / 10, 1.0])
         return {
             "num_obstacles": self.num_obstacles,
             "deadline": np.array([self.deadline], dtype=np.float32),
@@ -125,8 +131,18 @@ class FOTEnv(gym.Env):
             "num_threads": 0,  # set 0 to avoid using threaded algorithm
         }
 
-        action["maxt"] = action["mint"] + action.pop("d_min_max_t")
-        action["n_s_sample"] += 1
+        action = {
+            "d_road_w": action[0] * 5 + 1e-3,
+            "dt": action[1] + 1e-3,
+            "mint": 10 * action[2] + 0.1,
+            "maxt": 10 * action[2] + 0.1 + 10 * action[3] + 0.1,
+            "d_t_s": 5 * action[4] + 1e-3,
+            "n_s_sample": np.floor(10 * action[5] + 1)
+                }
+
+        # action["maxt"] = action["mint"] + action.pop("d_min_max_t")
+        # action["n_s_sample"] += 1
+        # action["n_s_sample"] = np.round(action["n_s_sample"])
         hyperparameters.update(action)
         frenet_hp = _parse_hyperparameters(hyperparameters)
         frenet_ic, _ = to_frenet_initial_conditions(self.initial_conditions)
@@ -160,16 +176,21 @@ class FOTEnv(gym.Env):
         planner.stop_plan()
 
         if success:
+            distance_to_wp = np.linalg.norm(
+                    self.initial_conditions["pos"] - self.initial_conditions["wp"][-1]) 
             self.initial_conditions["pos"] = np.array(
                 [self.result_x[1], self.result_y[1]]
             )
             self.initial_conditions["vel"] = np.array([speeds_x[1], speeds_y[1]])
             self.initial_conditions["ps"] = misc["s"]
-            done = self.result_x[1] > 100
             reward = costs["cf"]
+            done = distance_to_wp < 10
         else:
+            distance_to_wp = 150
             done = True
             reward = -1000
+
+        distance_to_wp /= 150
 
         # self.deadline = 0.2
         self.deadline = np.random.uniform(0.001, 0.1)
@@ -178,6 +199,7 @@ class FOTEnv(gym.Env):
             "num_obstacles": self.num_obstacles,
             "deadline": np.array([self.deadline]),
         }
+        obs = np.array([self.deadline, self.num_obstacles / 10, min(distance_to_wp, 1.0)])
         return obs, reward, done, {}
 
 

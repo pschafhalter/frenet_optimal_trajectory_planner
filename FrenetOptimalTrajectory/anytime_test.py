@@ -76,7 +76,7 @@ hp = _parse_hyperparameters(hyperparameters)
 
 # testing parameters
 NUM_ITER = 10
-TEST_INTERVAL_TIME = 0.002  # in seconds
+TEST_INTERVAL_TIME = 0.02  # in seconds
 
 # Calling Anytime Planner
 planner = fp.FotPlanner(ic, hp)

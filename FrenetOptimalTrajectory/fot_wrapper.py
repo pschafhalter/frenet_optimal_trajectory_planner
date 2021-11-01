@@ -18,13 +18,14 @@ except:
         MAX_PATH_LENGTH,
     )
 
-try:
-    cdll = CDLL("build/libFrenetOptimalTrajectory.so")
-except:
-    cdll = CDLL(
-        "{}/dependencies/frenet_optimal_trajectory_planner/"
-        "build/libFrenetOptimalTrajectory.so".format(os.getenv("PYLOT_HOME"))
-    )
+# cdll = CDLL("build/libFrenetOptimalTrajectory.so")
+# cdll = CDLL("/data/pschafhalter/workspace/frenet_optimal_trajectory/build/libFrenetOptimalTrajectory.so")
+cdll = CDLL("/data/pschafhalter/workspace/frenet_optimal_trajectory_planner/build/libFrenetOptimalTrajectory.so")
+# except:
+#     cdll = CDLL(
+#         "{}/dependencies/frenet_optimal_trajectory_planner/"
+#         "build/libFrenetOptimalTrajectory.so".format(os.getenv("PYLOT_HOME"))
+#     )
 
 _c_double_p = POINTER(c_double)
 

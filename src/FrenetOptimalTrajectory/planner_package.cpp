@@ -152,7 +152,7 @@ static PyObject *method_get_path(PyObject *self, PyObject *args)
     }
     else
     {
-        printf("No valid path available\n");
+        // printf("No valid path available\n");
         return Py_None;
     }
 }
