@@ -237,7 +237,6 @@ def to_frenet_initial_conditions(initial_conditions):
 
     # construct return array and convert initial conditions
     misc = np.zeros(5)
-    print("calling C initial conditions")
     _to_frenet_initial_conditions(
         c_double(ps),
         c_double(x),
@@ -251,7 +250,6 @@ def to_frenet_initial_conditions(initial_conditions):
         misc.ctypes.data_as(_c_double_p),
     )
 
-    print("returning initial conditions")
 
     # return the FrenetInitialConditions structure
     return (
@@ -280,40 +278,25 @@ def to_frenet_initial_conditions(initial_conditions):
 #############################################################
 def query_anytime_planner_path(fot_planner, return_rv_object=False):
     # return value should be separate for each path
-    print("initializing return values")
     fot_rv = FrenetReturnValues(0)
-    print("got return values")
     fot_planner.get_path(fot_rv)
-    print("got path")
 
     path_length = MAX_PATH_LENGTH
     for i in range(MAX_PATH_LENGTH):
         if np.isnan(fot_rv.x_path[i]):
             path_length = i
             break
-    print(f"path length: {path_length}")
-
 
     x_path = np.array([fot_rv.x_path[i] for i in range(path_length)])
-    print("x path")
     y_path = np.array([fot_rv.y_path[i] for i in range(path_length)])
-    print("y path")
     speeds = np.array([fot_rv.speeds[i] for i in range(path_length)])
-    print("speeds")
     ix = np.array([fot_rv.ix[i] for i in range(path_length)])
-    print("ix")
     iy = np.array([fot_rv.iy[i] for i in range(path_length)])
-    print("iy")
     iyaw = np.array([fot_rv.iyaw[i] for i in range(path_length)])
-    print("iyaw")
     d = np.array([fot_rv.d[i] for i in range(path_length)])
-    print("d")
     s = np.array([fot_rv.s[i] for i in range(path_length)])
-    print("s")
     speeds_x = np.array([fot_rv.speeds_x[i] for i in range(path_length)])
-    print("speeds x")
     speeds_y = np.array([fot_rv.speeds_y[i] for i in range(path_length)])
-    print("got path info")
     params = {
         "s": fot_rv.params[0],
         "s_d": fot_rv.params[1],
@@ -321,7 +304,6 @@ def query_anytime_planner_path(fot_planner, return_rv_object=False):
         "d_d": fot_rv.params[3],
         "d_dd": fot_rv.params[4],
     }
-    print("got params")
     costs = {
         "c_lateral_deviation": fot_rv.costs[0],
         "c_lateral_velocity": fot_rv.costs[1],
@@ -336,10 +318,8 @@ def query_anytime_planner_path(fot_planner, return_rv_object=False):
         "c_inv_dist_to_obstacles": fot_rv.costs[10],
         "cf": fot_rv.costs[11],
     }
-    print("got costs")
 
     success = fot_rv.success
-    print("got success")
     # remove values after last calculated waypoint
     ind = -1
     if success:
@@ -347,7 +327,6 @@ def query_anytime_planner_path(fot_planner, return_rv_object=False):
             ind = np.where(np.isnan(x_path))[0][0]
         except IndexError:
             success = False
-    print("returning path")
 
     if return_rv_object:
         return (
