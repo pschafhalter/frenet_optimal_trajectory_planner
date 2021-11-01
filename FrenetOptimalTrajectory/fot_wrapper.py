@@ -322,11 +322,12 @@ def query_anytime_planner_path(fot_planner, return_rv_object=False):
     success = fot_rv.success
     # remove values after last calculated waypoint
     ind = -1
-    if success:
-        try:
-            ind = np.where(np.isnan(x_path))[0][0]
-        except IndexError:
-            success = False
+    # if success:
+    #     try:
+    #         print(x_path)
+    #         ind = np.where(np.isnan(x_path))[0][0]
+    #     except IndexError:
+    #         success = False
 
     if return_rv_object:
         return (
