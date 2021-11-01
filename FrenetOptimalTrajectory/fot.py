@@ -8,29 +8,23 @@ from pathlib import Path
 
 
 # Run fot planner
-def fot(show_animation=False,
-        show_info=False,
-        num_threads=0,
-        save_frame=False):
+def fot(show_animation=False, show_info=False, num_threads=0, save_frame=False):
     conds = {
-        's0':
-        0,
-        'target_speed':
-        20,
-        'wp': [[0, 0], [50, 0], [150, 0]],
-        'obs': [[48, -2, 52, 2], [98, -4, 102, 2], [98, 6, 102, 10],
-                [128, 2, 132, 6]],
-        'pos': [0, 0],
-        'vel': [0, 0],
+        "s0": 0,
+        "target_speed": 20,
+        "wp": [[0, 0], [50, 0], [150, 0]],
+        "obs": [[48, -2, 52, 2], [98, -4, 102, 2], [98, 6, 102, 10], [128, 2, 132, 6]],
+        "pos": [0, 0],
+        "vel": [0, 0],
     }  # paste output from debug log
 
     initial_conditions = {
-        'ps': conds['s0'],
-        'target_speed': conds['target_speed'],
-        'pos': np.array(conds['pos']),
-        'vel': np.array(conds['vel']),
-        'wp': np.array(conds['wp']),
-        'obs': np.array(conds['obs'])
+        "ps": conds["s0"],
+        "target_speed": conds["target_speed"],
+        "pos": np.array(conds["pos"]),
+        "vel": np.array(conds["vel"]),
+        "wp": np.array(conds["wp"]),
+        "obs": np.array(conds["obs"]),
     }
 
     hyperparameters = {
@@ -58,9 +52,9 @@ def fot(show_animation=False,
     }
 
     # static elements of planner
-    wx = initial_conditions['wp'][:, 0]
-    wy = initial_conditions['wp'][:, 1]
-    obs = np.array(conds['obs'])
+    wx = initial_conditions["wp"][:, 0]
+    wy = initial_conditions["wp"][:, 1]
+    obs = np.array(conds["obs"])
 
     # simulation config
     sim_loop = 200
@@ -71,9 +65,21 @@ def fot(show_animation=False,
         # run FOT and keep time
         print("Iteration: {}".format(i))
         start_time = time.time()
-        result_x, result_y, speeds, ix, iy, iyaw, d, s, speeds_x, \
-            speeds_y, misc, costs, success = \
-            fot_wrapper.run_fot(initial_conditions, hyperparameters)
+        (
+            result_x,
+            result_y,
+            speeds,
+            ix,
+            iy,
+            iyaw,
+            d,
+            s,
+            speeds_x,
+            speeds_y,
+            misc,
+            costs,
+            success,
+        ) = fot_wrapper.run_fot(initial_conditions, hyperparameters)
         end_time = time.time() - start_time
         print("Time taken: {}".format(end_time))
         total_time += end_time
@@ -81,11 +87,11 @@ def fot(show_animation=False,
 
         # reconstruct initial_conditions
         if success:
-            initial_conditions['pos'] = np.array([result_x[1], result_y[1]])
-            initial_conditions['vel'] = np.array([speeds_x[1], speeds_y[1]])
-            initial_conditions['ps'] = misc['s']
+            initial_conditions["pos"] = np.array([result_x[1], result_y[1]])
+            initial_conditions["vel"] = np.array([speeds_x[1], speeds_y[1]])
+            initial_conditions["ps"] = misc["s"]
             if show_info:
-                print(costs)
+                print("costs", costs)
         else:
             print("Failed unexpectedly")
             break
@@ -100,7 +106,8 @@ def fot(show_animation=False,
             # for stopping simulation with the esc key.
             plt.gcf().canvas.mpl_connect(
                 "key_release_event",
-                lambda event: [exit(0) if event.key == "escape" else None])
+                lambda event: [exit(0) if event.key == "escape" else None],
+            )
             plt.plot(wx, wy)
             if obs.shape[0] == 0:
                 obs = np.empty((0, 4))
@@ -114,8 +121,7 @@ def fot(show_animation=False,
             plt.ylim(result_y[1] - area, result_y[1] + area)
             plt.xlabel("X axis")
             plt.ylabel("Y axis")
-            plt.title("v[m/s]:" +
-                      str(np.linalg.norm(initial_conditions['vel']))[0:4])
+            plt.title("v[m/s]:" + str(np.linalg.norm(initial_conditions["vel"]))[0:4])
             plt.grid(True)
             if save_frame:
                 Path("img/frames").mkdir(parents=True, exist_ok=True)
@@ -132,27 +138,24 @@ def fot(show_animation=False,
     return time_list
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d",
         "--display",
         action="store_true",
-        help="show animation, ensure you have X11 forwarding server open")
-    parser.add_argument("-v",
-                        "--verbose",
-                        action="store_true",
-                        help="verbose mode, show all state info")
-    parser.add_argument("-s",
-                        "--save",
-                        action="store_true",
-                        help="save each frame of simulation")
-    parser.add_argument("-t",
-                        "--thread",
-                        type=int,
-                        default=0,
-                        help="set number of threads to run with")
+        help="show animation, ensure you have X11 forwarding server open",
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="verbose mode, show all state info"
+    )
+    parser.add_argument(
+        "-s", "--save", action="store_true", help="save each frame of simulation"
+    )
+    parser.add_argument(
+        "-t", "--thread", type=int, default=0, help="set number of threads to run with"
+    )
     args = parser.parse_args()
 
     # run planner with args passed in

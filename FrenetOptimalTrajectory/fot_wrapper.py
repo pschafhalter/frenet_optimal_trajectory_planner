@@ -4,19 +4,27 @@ import os
 from ctypes import c_double, c_int, POINTER, Structure, CDLL, byref
 
 try:
-    from py_cpp_struct import FrenetInitialConditions, FrenetHyperparameters, \
-        FrenetReturnValues, MAX_PATH_LENGTH
+    from py_cpp_struct import (
+        FrenetInitialConditions,
+        FrenetHyperparameters,
+        FrenetReturnValues,
+        MAX_PATH_LENGTH,
+    )
 except:
-    from frenet_optimal_trajectory_planner.FrenetOptimalTrajectory\
-        .py_cpp_struct import FrenetInitialConditions, FrenetHyperparameters, \
-         FrenetReturnValues, MAX_PATH_LENGTH
+    from frenet_optimal_trajectory_planner.FrenetOptimalTrajectory.py_cpp_struct import (
+        FrenetInitialConditions,
+        FrenetHyperparameters,
+        FrenetReturnValues,
+        MAX_PATH_LENGTH,
+    )
 
 try:
     cdll = CDLL("build/libFrenetOptimalTrajectory.so")
 except:
-    cdll = CDLL("{}/dependencies/frenet_optimal_trajectory_planner/"
-                "build/libFrenetOptimalTrajectory.so".format(
-                    os.getenv("PYLOT_HOME")))
+    cdll = CDLL(
+        "{}/dependencies/frenet_optimal_trajectory_planner/"
+        "build/libFrenetOptimalTrajectory.so".format(os.getenv("PYLOT_HOME"))
+    )
 
 _c_double_p = POINTER(c_double)
 
@@ -32,23 +40,48 @@ _run_fot.restype = None
 # func / return type declarations for C++ to_frenet_initial_conditions
 _to_frenet_initial_conditions = cdll.to_frenet_initial_conditions
 _to_frenet_initial_conditions.restype = None
-_to_frenet_initial_conditions.argtypes = (c_double, c_double, c_double,
-                                          c_double, c_double, c_double,
-                                          _c_double_p, _c_double_p, c_int,
-                                          _c_double_p)
+_to_frenet_initial_conditions.argtypes = (
+    c_double,
+    c_double,
+    c_double,
+    c_double,
+    c_double,
+    c_double,
+    _c_double_p,
+    _c_double_p,
+    c_int,
+    _c_double_p,
+)
 
 
 def _parse_hyperparameters(hp):
     return FrenetHyperparameters(
-        hp["max_speed"], hp["max_accel"], hp["max_curvature"],
-        hp["max_road_width_l"], hp["max_road_width_r"], hp["d_road_w"],
-        hp["dt"], hp["maxt"], hp["mint"], hp["d_t_s"], hp["n_s_sample"],
-        hp["obstacle_clearance"], hp["kd"], hp["kv"], hp["ka"], hp["kj"],
-        hp["kt"], hp["ko"], hp["klat"], hp["klon"], hp["num_threads"])
+        hp["max_speed"],
+        hp["max_accel"],
+        hp["max_curvature"],
+        hp["max_road_width_l"],
+        hp["max_road_width_r"],
+        hp["d_road_w"],
+        hp["dt"],
+        hp["maxt"],
+        hp["mint"],
+        hp["d_t_s"],
+        hp["n_s_sample"],
+        hp["obstacle_clearance"],
+        hp["kd"],
+        hp["kv"],
+        hp["ka"],
+        hp["kj"],
+        hp["kt"],
+        hp["ko"],
+        hp["klat"],
+        hp["klon"],
+        hp["num_threads"],
+    )
 
 
 def run_fot(initial_conditions, hyperparameters):
-    """ Return the frenet optimal trajectory given initial conditions in
+    """Return the frenet optimal trajectory given initial conditions in
     cartesian space.
 
     Args:
@@ -99,8 +132,7 @@ def run_fot(initial_conditions, hyperparameters):
         success (bool): whether a fot was found or not
     """
     # parse initial conditions and convert to frenet coordinates
-    fot_initial_conditions, misc = to_frenet_initial_conditions(
-        initial_conditions)
+    fot_initial_conditions, misc = to_frenet_initial_conditions(initial_conditions)
 
     # parse hyper parameters
     fot_hp = _parse_hyperparameters(hyperparameters)
@@ -150,13 +182,25 @@ def run_fot(initial_conditions, hyperparameters):
     if success:
         ind = np.where(np.isnan(x_path))[0][0]
 
-    return x_path[:ind], y_path[:ind], speeds[:ind], \
-           ix[:ind], iy[:ind], iyaw[:ind], d[:ind], s[:ind], \
-           speeds_x[:ind], speeds_y[:ind], params, costs, success
+    return (
+        x_path[:ind],
+        y_path[:ind],
+        speeds[:ind],
+        ix[:ind],
+        iy[:ind],
+        iyaw[:ind],
+        d[:ind],
+        s[:ind],
+        speeds_x[:ind],
+        speeds_y[:ind],
+        params,
+        costs,
+        success,
+    )
 
 
 def to_frenet_initial_conditions(initial_conditions):
-    """ Convert the cartesian initial conditions into frenet initial conditions.
+    """Convert the cartesian initial conditions into frenet initial conditions.
 
     Args:
         initial_conditions (dict): dictionary containing
@@ -171,12 +215,12 @@ def to_frenet_initial_conditions(initial_conditions):
         FrenetInitialConditions, dictionary for debugging
     """
     # parse the initial conditions
-    ps = initial_conditions['ps']
-    pos = initial_conditions['pos']
-    vel = initial_conditions['vel']
-    wp = initial_conditions['wp']
-    obs = initial_conditions['obs']
-    target_speed = initial_conditions['target_speed']
+    ps = initial_conditions["ps"]
+    pos = initial_conditions["pos"]
+    vel = initial_conditions["vel"]
+    wp = initial_conditions["wp"]
+    obs = initial_conditions["obs"]
+    target_speed = initial_conditions["target_speed"]
     if obs.shape[0] == 0:
         obs = np.empty((0, 4))
     x = pos[0].item()
@@ -193,31 +237,42 @@ def to_frenet_initial_conditions(initial_conditions):
 
     # construct return array and convert initial conditions
     misc = np.zeros(5)
-    _to_frenet_initial_conditions(c_double(ps), c_double(x), c_double(y),
-                                  c_double(vx), c_double(vy),
-                                  c_double(forward_speed),
-                                  wx.ctypes.data_as(_c_double_p),
-                                  wy.ctypes.data_as(_c_double_p),
-                                  c_int(len(wx)),
-                                  misc.ctypes.data_as(_c_double_p))
+    print("calling C initial conditions")
+    _to_frenet_initial_conditions(
+        c_double(ps),
+        c_double(x),
+        c_double(y),
+        c_double(vx),
+        c_double(vy),
+        c_double(forward_speed),
+        wx.ctypes.data_as(_c_double_p),
+        wy.ctypes.data_as(_c_double_p),
+        c_int(len(wx)),
+        misc.ctypes.data_as(_c_double_p),
+    )
+
+    print("returning initial conditions")
 
     # return the FrenetInitialConditions structure
-    return FrenetInitialConditions(
-        misc[0],  # c_s
-        misc[1],  # c_speed
-        misc[2],  # c_d
-        misc[3],  # c_d_d
-        misc[4],  # c_d_dd
-        target_speed,  # target speed
-        wx.ctypes.data_as(_c_double_p),  # waypoints x position
-        wy.ctypes.data_as(_c_double_p),  # waypoints y position
-        len(wx),
-        o_llx.ctypes.data_as(_c_double_p),  # obstacles lower left x
-        o_lly.ctypes.data_as(_c_double_p),  # obstacles lower left y
-        o_urx.ctypes.data_as(_c_double_p),  # obstacles upper right x
-        o_ury.ctypes.data_as(_c_double_p),  # obstacles upper right y
-        len(o_llx),
-    ), misc
+    return (
+        FrenetInitialConditions(
+            misc[0],  # c_s
+            misc[1],  # c_speed
+            misc[2],  # c_d
+            misc[3],  # c_d_d
+            misc[4],  # c_d_dd
+            target_speed,  # target speed
+            wx.ctypes.data_as(_c_double_p),  # waypoints x position
+            wy.ctypes.data_as(_c_double_p),  # waypoints y position
+            len(wx),
+            o_llx.ctypes.data_as(_c_double_p),  # obstacles lower left x
+            o_lly.ctypes.data_as(_c_double_p),  # obstacles lower left y
+            o_urx.ctypes.data_as(_c_double_p),  # obstacles upper right x
+            o_ury.ctypes.data_as(_c_double_p),  # obstacles upper right y
+            len(o_llx),
+        ),
+        misc,
+    )
 
 
 #############################################################
@@ -225,19 +280,40 @@ def to_frenet_initial_conditions(initial_conditions):
 #############################################################
 def query_anytime_planner_path(fot_planner, return_rv_object=False):
     # return value should be separate for each path
+    print("initializing return values")
     fot_rv = FrenetReturnValues(0)
+    print("got return values")
     fot_planner.get_path(fot_rv)
+    print("got path")
 
-    x_path = np.array([fot_rv.x_path[i] for i in range(MAX_PATH_LENGTH)])
-    y_path = np.array([fot_rv.y_path[i] for i in range(MAX_PATH_LENGTH)])
-    speeds = np.array([fot_rv.speeds[i] for i in range(MAX_PATH_LENGTH)])
-    ix = np.array([fot_rv.ix[i] for i in range(MAX_PATH_LENGTH)])
-    iy = np.array([fot_rv.iy[i] for i in range(MAX_PATH_LENGTH)])
-    iyaw = np.array([fot_rv.iyaw[i] for i in range(MAX_PATH_LENGTH)])
-    d = np.array([fot_rv.d[i] for i in range(MAX_PATH_LENGTH)])
-    s = np.array([fot_rv.s[i] for i in range(MAX_PATH_LENGTH)])
-    speeds_x = np.array([fot_rv.speeds_x[i] for i in range(MAX_PATH_LENGTH)])
-    speeds_y = np.array([fot_rv.speeds_y[i] for i in range(MAX_PATH_LENGTH)])
+    path_length = MAX_PATH_LENGTH
+    for i in range(MAX_PATH_LENGTH):
+        if np.isnan(fot_rv.x_path[i]):
+            path_length = i
+            break
+    print(f"path length: {path_length}")
+
+
+    x_path = np.array([fot_rv.x_path[i] for i in range(path_length)])
+    print("x path")
+    y_path = np.array([fot_rv.y_path[i] for i in range(path_length)])
+    print("y path")
+    speeds = np.array([fot_rv.speeds[i] for i in range(path_length)])
+    print("speeds")
+    ix = np.array([fot_rv.ix[i] for i in range(path_length)])
+    print("ix")
+    iy = np.array([fot_rv.iy[i] for i in range(path_length)])
+    print("iy")
+    iyaw = np.array([fot_rv.iyaw[i] for i in range(path_length)])
+    print("iyaw")
+    d = np.array([fot_rv.d[i] for i in range(path_length)])
+    print("d")
+    s = np.array([fot_rv.s[i] for i in range(path_length)])
+    print("s")
+    speeds_x = np.array([fot_rv.speeds_x[i] for i in range(path_length)])
+    print("speeds x")
+    speeds_y = np.array([fot_rv.speeds_y[i] for i in range(path_length)])
+    print("got path info")
     params = {
         "s": fot_rv.params[0],
         "s_d": fot_rv.params[1],
@@ -245,6 +321,7 @@ def query_anytime_planner_path(fot_planner, return_rv_object=False):
         "d_d": fot_rv.params[3],
         "d_dd": fot_rv.params[4],
     }
+    print("got params")
     costs = {
         "c_lateral_deviation": fot_rv.costs[0],
         "c_lateral_velocity": fot_rv.costs[1],
@@ -259,19 +336,49 @@ def query_anytime_planner_path(fot_planner, return_rv_object=False):
         "c_inv_dist_to_obstacles": fot_rv.costs[10],
         "cf": fot_rv.costs[11],
     }
+    print("got costs")
 
     success = fot_rv.success
+    print("got success")
     # remove values after last calculated waypoint
     ind = -1
     if success:
-        ind = np.where(np.isnan(x_path))[0][0]
+        try:
+            ind = np.where(np.isnan(x_path))[0][0]
+        except IndexError:
+            success = False
+    print("returning path")
 
     if return_rv_object:
-        return x_path[:ind], y_path[:ind], speeds[:ind], \
-            ix[:ind], iy[:ind], iyaw[:ind], d[:ind], s[:ind], \
-            speeds_x[:ind], speeds_y[:ind], params, costs, success, \
-            fot_rv
+        return (
+            x_path[:ind],
+            y_path[:ind],
+            speeds[:ind],
+            ix[:ind],
+            iy[:ind],
+            iyaw[:ind],
+            d[:ind],
+            s[:ind],
+            speeds_x[:ind],
+            speeds_y[:ind],
+            params,
+            costs,
+            success,
+            fot_rv,
+        )
     else:
-        return x_path[:ind], y_path[:ind], speeds[:ind], \
-            ix[:ind], iy[:ind], iyaw[:ind], d[:ind], s[:ind], \
-            speeds_x[:ind], speeds_y[:ind], params, costs, success
+        return (
+            x_path[:ind],
+            y_path[:ind],
+            speeds[:ind],
+            ix[:ind],
+            iy[:ind],
+            iyaw[:ind],
+            d[:ind],
+            s[:ind],
+            speeds_x[:ind],
+            speeds_y[:ind],
+            params,
+            costs,
+            success,
+        )
