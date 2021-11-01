@@ -5,7 +5,8 @@
 /**
  * FotPlanner Defintions
  */
-PyObject *FotPlanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+PyObject *FotPlanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
     FotPlanner *self = (FotPlanner *)type->tp_alloc(type, 1);
     self->fot = NULL;
     return (PyObject *)self;
@@ -15,16 +16,20 @@ PyObject *FotPlanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
  * Initializer for FotPlanner, set up Anytime Planner
  * with initial condition and hyperparameters
  */
-int FotPlanner_init(PyObject *self, PyObject *args, PyObject *kwds) {
+int FotPlanner_init(PyObject *self, PyObject *args, PyObject *kwds)
+{
     // pass IC and HP into this
     PyObject *ic_ptr = NULL;
     PyObject *hp_ptr = NULL;
-    if (PyArg_UnpackTuple(args, "args", 1, 2, &ic_ptr, &hp_ptr)) {
+    if (PyArg_UnpackTuple(args, "args", 1, 2, &ic_ptr, &hp_ptr))
+    {
         ((FotPlanner *)self)->fot = new AnytimeFrenetOptimalTrajectory(
             ((FotIC *)ic_ptr)->ic, ((FotHP *)hp_ptr)->hp);
-        printf("fot_planner: Anytime Fot Planner Initiated\n");
+        // printf("fot_planner: Anytime Fot Planner Initiated\n");
         return 0;
-    } else {
+    }
+    else
+    {
         printf("Error: Anytime Fot Planner cannot be Initiated\n");
         return -1;
     }
@@ -33,8 +38,8 @@ int FotPlanner_init(PyObject *self, PyObject *args, PyObject *kwds) {
 /**
  * Deallocate FotPlanner and Planner Instance
  */
-void FotPlanner_dealloc(FotPlanner *self) {
-    printf("fot_planner: Planner dealloced\n");
+void FotPlanner_dealloc(FotPlanner *self)
+{
     delete self->fot;
     Py_TYPE(self)->tp_free(self);
 }
@@ -43,9 +48,10 @@ void FotPlanner_dealloc(FotPlanner *self) {
  * Call Anytime Planner to initiate worker threads
  * and start planning based on ic and hp
  */
-static PyObject *method_async_plan(PyObject *self, PyObject *args) {
+static PyObject *method_async_plan(PyObject *self, PyObject *args)
+{
     ((FotPlanner *)self)->fot->asyncPlan();
-    printf("fot_planner: Anytime Fot Planner Start Planning Asynchronously\n");
+    // printf("fot_planner: Anytime Fot Planner Start Planning Asynchronously\n");
     return Py_None;
 }
 
@@ -55,22 +61,28 @@ static PyObject *method_async_plan(PyObject *self, PyObject *args) {
  * Each query should require a different FotRV, so that different paths are
  * stored in separate objects
  */
-static PyObject *method_get_path(PyObject *self, PyObject *args) {
+static PyObject *method_get_path(PyObject *self, PyObject *args)
+{
     FrenetPath *best_frenet_path = ((FotPlanner *)self)->fot->getBestPath();
 
     PyObject *rv_ptr = NULL;
     FrenetReturnValues *fot_rv = NULL;
 
-    if (PyArg_UnpackTuple(args, "args", 1, 1, &rv_ptr)) {
+    if (PyArg_UnpackTuple(args, "args", 1, 1, &rv_ptr))
+    {
         fot_rv = ((FotRV *)rv_ptr)->rv;
-    } else {
+    }
+    else
+    {
         printf("Require FotRV Object for Argument\n");
         return Py_None;
     }
 
-    if (best_frenet_path && !best_frenet_path->x.empty()) {
+    if (best_frenet_path && !best_frenet_path->x.empty())
+    {
         int last = 0;
-        for (size_t i = 0; i < best_frenet_path->x.size(); i++) {
+        for (size_t i = 0; i < best_frenet_path->x.size() && i < MAX_PATH_LENGTH; i++)
+        {
             fot_rv->x_path[i] = best_frenet_path->x[i];
             fot_rv->y_path[i] = best_frenet_path->y[i];
             fot_rv->speeds[i] = best_frenet_path->s_d[i];
@@ -84,6 +96,22 @@ static PyObject *method_get_path(PyObject *self, PyObject *args) {
             fot_rv->speeds_y[i] =
                 sin(best_frenet_path->yaw[i]) * fot_rv->speeds[i];
             last += 1;
+        }
+
+        for (size_t i = last + 1; i < MAX_PATH_LENGTH; i++)
+        {
+            fot_rv->x_path[i] = NAN;
+            fot_rv->y_path[i] = NAN;
+            fot_rv->speeds[i] = NAN;
+            fot_rv->ix[i] = NAN;
+            fot_rv->iy[i] = NAN;
+            fot_rv->iyaw[i] = NAN;
+            fot_rv->d[i] = NAN;
+            fot_rv->s[i] = NAN;
+            fot_rv->speeds_x[i] =
+                NAN;
+            fot_rv->speeds_y[i] =
+                NAN;
         }
 
         // indicate last point in the path
@@ -119,8 +147,11 @@ static PyObject *method_get_path(PyObject *self, PyObject *args) {
         fot_rv->costs[9] = best_frenet_path->c_longitudinal;
         fot_rv->costs[10] = best_frenet_path->c_inv_dist_to_obstacles;
         fot_rv->costs[11] = best_frenet_path->cf;
+
         return Py_None;
-    } else {
+    }
+    else
+    {
         printf("No valid path available\n");
         return Py_None;
     }
@@ -129,9 +160,10 @@ static PyObject *method_get_path(PyObject *self, PyObject *args) {
 /**
  * Stop Planning, calls stopPlanning from c planner
  */
-static PyObject *method_stop_plan(PyObject *self, PyObject *args) {
+static PyObject *method_stop_plan(PyObject *self, PyObject *args)
+{
     ((FotPlanner *)self)->fot->stopPlanning();
-    printf("fot_planner: Planner Stopped Planning\n");
+    // printf("fot_planner: Planner Stopped Planning\n");
     return Py_None;
 }
 
@@ -170,7 +202,8 @@ static struct PyModuleDef fot_planner_module = {
 /* Initialize the fot_planner module
  * TO-DO: Not sure if we need to incorporate Reference Count
  */
-PyMODINIT_FUNC PyInit_fot_planner(void) {
+PyMODINIT_FUNC PyInit_fot_planner(void)
+{
     Py_Initialize();
     PyObject *m;
     if (PyType_Ready(&FotPlannerType) < 0)

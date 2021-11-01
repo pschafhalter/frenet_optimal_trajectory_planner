@@ -14,7 +14,8 @@ using namespace std;
  * Set up Conditions to calculate the frenet optimal trajectory
  */
 AnytimeFrenetOptimalTrajectory::AnytimeFrenetOptimalTrajectory(
-    FrenetInitialConditions *fot_ic_, FrenetHyperparameters *fot_hp_) {
+    FrenetInitialConditions *fot_ic_, FrenetHyperparameters *fot_hp_)
+{
     // parse the waypoints and obstacles
     fot_ic = fot_ic_;
     fot_hp = fot_hp_;
@@ -30,7 +31,8 @@ AnytimeFrenetOptimalTrajectory::AnytimeFrenetOptimalTrajectory(
     best_frenet_path = nullptr;
 
     // exit if not enough waypoints
-    if (x.size() < 2) {
+    if (x.size() < 2)
+    {
         return;
     }
 
@@ -38,18 +40,21 @@ AnytimeFrenetOptimalTrajectory::AnytimeFrenetOptimalTrajectory(
     csp = new CubicSpline2D(x, y);
 }
 
-AnytimeFrenetOptimalTrajectory::~AnytimeFrenetOptimalTrajectory() {
+AnytimeFrenetOptimalTrajectory::~AnytimeFrenetOptimalTrajectory()
+{
 
     AnytimeFrenetOptimalTrajectory::stopPlanning();
 
     delete mu;
     delete csp;
 
-    for (FrenetPath *fp : frenet_paths) {
+    for (FrenetPath *fp : frenet_paths)
+    {
         delete fp;
     }
 
-    for (Obstacle *ob : obstacles) {
+    for (Obstacle *ob : obstacles)
+    {
         delete ob;
     }
 }
@@ -58,7 +63,8 @@ AnytimeFrenetOptimalTrajectory::~AnytimeFrenetOptimalTrajectory() {
  * Start planning using a pool of worker threads
  * Initiate a thread pool, and delegate path planning task to each thread
  */
-void AnytimeFrenetOptimalTrajectory::asyncPlan() {
+void AnytimeFrenetOptimalTrajectory::asyncPlan()
+{
 
     run_workers = true; // set run_worker flag
 
@@ -70,37 +76,44 @@ void AnytimeFrenetOptimalTrajectory::asyncPlan() {
 
     // in this setup, everything must be run in a thread pool, thus replace 0
     // threads (indicator of using single-threaded algo) with 1 thread
-    if (fot_hp->num_threads == 0) {
+    if (fot_hp->num_threads == 0)
+    {
         fot_hp->num_threads = 1;
     }
 
     int iter_di_index_range =
         static_cast<int>(num_di_iter / fot_hp->num_threads);
 
-    for (int i = 0; i < fot_hp->num_threads; i++) {
-        if (i != fot_hp->num_threads - 1) {
+    for (int i = 0; i < fot_hp->num_threads; i++)
+    {
+        if (i != fot_hp->num_threads - 1)
+        {
             threads.push_back(new thread(
                 &AnytimeFrenetOptimalTrajectory::calc_frenet_paths, this,
                 i * iter_di_index_range, (i + 1) * iter_di_index_range));
-        } else { // account for last thread edge case
+        }
+        else
+        { // account for last thread edge case
             threads.push_back(
                 new thread(&AnytimeFrenetOptimalTrajectory::calc_frenet_paths,
                            this, i * iter_di_index_range, num_di_iter));
         }
     }
 
-    cout << fot_hp->num_threads << " worker threads initiated\n";
+    // cout << fot_hp->num_threads << " worker threads initiated\n";
 }
 
 /**
  * Stop worker threads from planning and join them
  */
-void AnytimeFrenetOptimalTrajectory::stopPlanning() {
+void AnytimeFrenetOptimalTrajectory::stopPlanning()
+{
 
     run_workers = false;
 
     // wait for all threads to finish computation
-    for (auto &t : threads) {
+    for (auto &t : threads)
+    {
         t->join();
         delete t;
     }
@@ -112,12 +125,15 @@ void AnytimeFrenetOptimalTrajectory::stopPlanning() {
  * Return the best path thus far, look through all the paths worker threads have
  * found thus far
  */
-FrenetPath *AnytimeFrenetOptimalTrajectory::getBestPath() {
+FrenetPath *AnytimeFrenetOptimalTrajectory::getBestPath()
+{
     mu->lock();
     // select the best path
     double mincost = INFINITY;
-    for (FrenetPath *fp : frenet_paths) {
-        if (fp->cf <= mincost) {
+    for (FrenetPath *fp : frenet_paths)
+    {
+        if (fp->cf <= mincost)
+        {
             mincost = fp->cf;
             best_frenet_path = fp;
         }
@@ -135,7 +151,8 @@ FrenetPath *AnytimeFrenetOptimalTrajectory::getBestPath() {
  * (exclusive). Then, computes the actual di value for path planning.
  */
 void AnytimeFrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
-                                                       int end_di_index) {
+                                                       int end_di_index)
+{
 
     double t, ti, tv;
     double lateral_deviation, lateral_velocity, lateral_acceleration,
@@ -155,11 +172,13 @@ void AnytimeFrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
         run_workers &&
         (di < -fot_hp->max_road_width_l + end_di_index * fot_hp->d_road_w) &&
         (di <=
-         fot_hp->max_road_width_r)) { // TODO: better sol to detect run worker
+         fot_hp->max_road_width_r))
+    { // TODO: better sol to detect run worker
         ti = fot_hp->mint;
 
         // lateral motion planning
-        while (ti <= fot_hp->maxt) {
+        while (ti <= fot_hp->maxt)
+        {
             lateral_deviation = 0;
             lateral_velocity = 0;
             lateral_acceleration = 0;
@@ -171,7 +190,8 @@ void AnytimeFrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
 
             // construct frenet path
             t = 0;
-            while (t <= ti) {
+            while (t <= ti)
+            {
                 fp->t.push_back(t);
                 fp->d.push_back(lat_qp.calc_point(t));
                 fp->d_d.push_back(lat_qp.calc_first_derivative(t));
@@ -187,7 +207,8 @@ void AnytimeFrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
             // velocity keeping
             tv = fot_ic->target_speed - fot_hp->d_t_s * fot_hp->n_s_sample;
             while (tv <=
-                   fot_ic->target_speed + fot_hp->d_t_s * fot_hp->n_s_sample) {
+                   fot_ic->target_speed + fot_hp->d_t_s * fot_hp->n_s_sample)
+            {
                 longitudinal_acceleration = 0;
                 longitudinal_jerk = 0;
 
@@ -202,7 +223,8 @@ void AnytimeFrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                     fot_ic->s0, fot_ic->c_speed, 0.0, tv, 0.0, ti);
 
                 // longitudinal motion
-                for (double tp : tfp->t) {
+                for (double tp : tfp->t)
+                {
                     tfp->s.push_back(lon_qp.calc_point(tp));
                     tfp->s_d.push_back(lon_qp.calc_first_derivative(tp));
                     tfp->s_dd.push_back(lon_qp.calc_second_derivative(tp));
@@ -216,7 +238,8 @@ void AnytimeFrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 // delete if failure or invalid path
                 bool success = tfp->to_global_path(csp);
                 num_viable_paths++;
-                if (!success) {
+                if (!success)
+                {
                     // deallocate memory and continue
                     delete tfp;
                     tv += fot_hp->d_t_s;
@@ -229,7 +252,8 @@ void AnytimeFrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 // valid_path_time +=
                 // chrono::duration_cast<chrono::nanoseconds>(end -
                 // start).count();
-                if (!valid_path) {
+                if (!valid_path)
+                {
                     // deallocate memory and continue
                     delete tfp;
                     tv += fot_hp->d_t_s;
@@ -287,20 +311,23 @@ void AnytimeFrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
     // valid_path_time << "\n";
 }
 
-void AnytimeFrenetOptimalTrajectory::setObstacles() {
+void AnytimeFrenetOptimalTrajectory::setObstacles()
+{
     // Construct obstacles
     vector<double> llx(fot_ic->o_llx, fot_ic->o_llx + fot_ic->no);
     vector<double> lly(fot_ic->o_lly, fot_ic->o_lly + fot_ic->no);
     vector<double> urx(fot_ic->o_urx, fot_ic->o_urx + fot_ic->no);
     vector<double> ury(fot_ic->o_ury, fot_ic->o_ury + fot_ic->no);
 
-    for (int i = 0; i < fot_ic->no; i++) {
+    for (int i = 0; i < fot_ic->no; i++)
+    {
         addObstacle(Vector2f(llx[i], lly[i]), Vector2f(urx[i], ury[i]));
     }
 }
 
 void AnytimeFrenetOptimalTrajectory::addObstacle(Vector2f first_point,
-                                                 Vector2f second_point) {
+                                                 Vector2f second_point)
+{
     obstacles.push_back(new Obstacle(std::move(first_point),
                                      std::move(second_point),
                                      fot_hp->obstacle_clearance));
